@@ -189,19 +189,21 @@ def processing_message(id_user, message_text):
         photos_user = vk_user_api.photos.get(owner_id=user['id'],
                                              album_id='profile',
                                              extended=1)['items']
-        for photo in photos_user:
-            selected_photos.append((photo.get('likes', {'count': 0}).
-                                    get('count'), photo['id']))
         if offset == 0:
             keyboard_user = 'look_user_begin'
         else:
             keyboard_user = 'look_user'
-        send_message(id_user, result_name, keyboard_user)
-        send_message(id_user, f'https://vk.com/id{user["id"]}', keyboard_user)
+        for photo in photos_user:
+            selected_photos.append((photo.get('likes', {'count': 0}).
+                                    get('count'), photo['id']))
+        attachment_list = []
         for num, photo in enumerate(sorted(selected_photos)):
-            send_attachment(id_user, f'photo{user["id"]}_{photo[1]}')
+            attachment_list.append(f'photo{user["id"]}_{photo[1]}')
             if num == 2:
                 break
+        send_message(id_user, result_name, keyboard_user)
+        send_message(id_user, f'https://vk.com/id{user["id"]}', keyboard_user)
+        send_attachment(id_user, ','.join(attachment_list))
     else:
         send_message(id_user, 'Какая-то ошибка! Поробуйте снова!')
 
