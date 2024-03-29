@@ -15,6 +15,10 @@ class Users(Base):
     blacklist = relationship('Blacklist', cascade="all, delete",
                              backref="users")
 
+    def __repr__(self):
+        return (f'{self.__class__.__name__}({self.id_vk=!r}, '
+                f'{self.first_name=!r}, {self.last_name=!r})')
+
 
 class Favorites(Base):
     __tablename__ = 'favorites'
@@ -23,8 +27,8 @@ class Favorites(Base):
                            primary_key=True)
 
     def __repr__(self):
-        return (f'{self.__class__.__name__}({self.id_vk_person!r}, '
-                f'{self.id_vk_user!r})')
+        return (f'{self.__class__.__name__}({self.id_vk_person=!r}, '
+                f'{self.id_vk_user=!r})')
 
 
 class Blacklist(Base):
@@ -33,9 +37,13 @@ class Blacklist(Base):
     id_vk_user = sq.Column(sq.Integer, sq.ForeignKey('users.id_vk'),
                            primary_key=True)
 
+    def __repr__(self):
+        return (f'{self.__class__.__name__}({self.id_vk_person=!r}, '
+                f'{self.id_vk_user=!r})')
+
 
 def create_tables_models(engine):
-    Base.metadata.drop_all(engine)
+    # Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 
 

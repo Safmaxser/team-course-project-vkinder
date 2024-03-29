@@ -293,7 +293,7 @@ class VKAPIBot:
         elif data.number_position == 13:
             list_cities = (
                 self.vk_user_api.database.getCities(
-                    q=message_text, count=5).get('items', []))
+                    q=message_text, count=3).get('items', []))
             if len(list_cities) == 0:
                 self._send_message(
                     id_user, 'Поиск не дал результатов! '
@@ -301,7 +301,7 @@ class VKAPIBot:
                              'Например: Москва', function='navigation')
             else:
                 for city in list_cities:
-                    self._send_message(id_user, f'id = {city.get("id", "")} - '
+                    self._send_message(id_user, f'ID = {city.get("id", "")} - '
                                                 f'{city.get("title", "")} '
                                                 f'{city.get("area", "")}'
                                                 f'{city.get("region", "")} ',
@@ -357,14 +357,12 @@ class VKAPIBot:
             data.viewed_type = 'blacklist'
             self._show_persons(id_user, data)
             data.number_position = 40
-            return
         elif data.number_position == 32:
             data.viewed_list = self.db_vk.get_favorites(id_user)
             data.viewed_position = 0
             data.viewed_type = 'favorites'
             self._show_persons(id_user, data)
             data.number_position = 40
-            return
         elif data.number_position == 40:
             if message_text == buttons('next'):
                 if data.viewed_position < len(data.viewed_list)-1:
