@@ -21,6 +21,37 @@ class UserData:
         self.viewed_type = None
         self.current_person = None
 
+    def reset(self):
+        self.__init__()
+
+    def begin_viewed(self, viewed_list, viewed_type):
+        self.viewed_position = 0
+        self.viewed_list = viewed_list
+        self.viewed_type = viewed_type
+
+    def next_position_viewed(self):
+        if self.viewed_position < len(self.viewed_list) - 1:
+            self.viewed_position += 1
+
+    def back_position_viewed(self):
+        if self.viewed_position > 0:
+            self.viewed_position -= 1
+
+    def del_position_viewed(self):
+        self.viewed_list.pop(self.viewed_position)
+        if self.viewed_position > len(self.viewed_list) - 1:
+            self.viewed_position = len(self.viewed_list) - 1
+
+    def viewed_keyboard(self):
+        if len(self.viewed_list) == 1:
+            return ''
+        elif self.viewed_position == 0:
+            return 'begin'
+        elif self.viewed_position == len(self.viewed_list) - 1:
+            return 'end'
+        else:
+            return 'middle'
+
 
 def buttons(name_button):
     if name_button == 'search_my':
@@ -106,12 +137,6 @@ def calculate_age(date_birth):
     return age
 
 
-def del_position_viewed(data: UserData):
-    data.viewed_list.pop(data.viewed_position)
-    if data.viewed_position > len(data.viewed_list)-1:
-        data.viewed_position = len(data.viewed_list)-1
-
-
 class VKAPIBot:
     def __init__(self, token_bot, token_user, db_vk: OperationsDB):
         self.token_bot = token_bot
@@ -190,15 +215,8 @@ class VKAPIBot:
 
     def _show_persons(self, id_user, data: UserData):
         if data.viewed_list:
-            keyboard_type = {'function': data.viewed_type}
-            if len(data.viewed_list) == 1:
-                keyboard_type['control'] = ''
-            elif data.viewed_position == 0:
-                keyboard_type['control'] = 'begin'
-            elif data.viewed_position == len(data.viewed_list) - 1:
-                keyboard_type['control'] = 'end'
-            else:
-                keyboard_type['control'] = 'middle'
+            keyboard_type = {'function': data.viewed_type,
+                             'control': data.viewed_keyboard()}
             id_person = data.viewed_list[data.viewed_position][0]
             self._send_person(id_user, id_person, **keyboard_type)
             data.current_person = id_person
@@ -224,11 +242,12 @@ class VKAPIBot:
             data.number_position = 32
 
         if data.number_position == 0:
-            data.__init__()
+            data.reset()
             self._send_message(
                 id_user, 'Тебя приветствует бот! Для поиска знакомств! '
                          'Выбери дальнейшее действие!', function='main')
         elif data.number_position == 1:
+            data.reset()
             my_user = self.vk_user_api.users.get(
                 user_ids=id_user, fields=['bdate', 'city', 'sex'])[0]
             if (my_user.get('sex', 0) > 0 and
@@ -248,6 +267,7 @@ class VKAPIBot:
                                    '"Искать по выборочным данным"!',
                                    function='main')
         elif data.number_position == 2:
+            data.reset()
             data.number_position = 11
             self._send_message(id_user, 'Введите возраст для поиска!'
                                         'Пример: 18-40 или 20',
@@ -303,7 +323,7 @@ class VKAPIBot:
                 for city in list_cities:
                     self._send_message(id_user, f'ID = {city.get("id", "")} - '
                                                 f'{city.get("title", "")} '
-                                                f'{city.get("area", "")}'
+                                                f'{city.get("area", "")} '
                                                 f'{city.get("region", "")} ',
                                        function='navigation')
                 self._send_message(id_user,
@@ -352,36 +372,30 @@ class VKAPIBot:
             self._send_person(id_user, person_id, result_name, **keyboard_type)
             data.current_person = person_id
         elif data.number_position == 31:
-            data.viewed_list = self.db_vk.get_blacklist(id_user)
-            data.viewed_position = 0
-            data.viewed_type = 'blacklist'
+            data.begin_viewed(self.db_vk.get_blacklist(id_user), 'blacklist')
             self._show_persons(id_user, data)
             data.number_position = 40
         elif data.number_position == 32:
-            data.viewed_list = self.db_vk.get_favorites(id_user)
-            data.viewed_position = 0
-            data.viewed_type = 'favorites'
+            data.begin_viewed(self.db_vk.get_favorites(id_user), 'favorites')
             self._show_persons(id_user, data)
             data.number_position = 40
         elif data.number_position == 40:
             if message_text == buttons('next'):
-                if data.viewed_position < len(data.viewed_list)-1:
-                    data.viewed_position += 1
+                data.next_position_viewed()
             elif message_text == buttons('back'):
-                if data.viewed_position > 0:
-                    data.viewed_position -= 1
+                data.back_position_viewed()
             elif message_text == buttons('add_favorites'):
                 self.db_vk.add_favorites(id_user, data.current_person)
-                del_position_viewed(data)
+                data.del_position_viewed()
             elif message_text == buttons('add_blacklist'):
                 self.db_vk.add_blacklist(id_user, data.current_person)
-                del_position_viewed(data)
+                data.del_position_viewed()
             elif message_text == buttons('del_favorites'):
                 self.db_vk.del_favorites(id_user, data.current_person)
-                del_position_viewed(data)
+                data.del_position_viewed()
             elif message_text == buttons('del_blacklist'):
                 self.db_vk.del_blacklist(id_user, data.current_person)
-                del_position_viewed(data)
+                data.del_position_viewed()
             self._show_persons(id_user, data)
         else:
             self._send_message(id_user, 'Какая-то ошибка! Попробуйте снова!')
