@@ -130,7 +130,7 @@ class VKAPIBot:
                 random_id=get_random_id(),
                 keyboard=keyboard_add(function=function, control=control),
                 message=message_text)
-        except:
+        except vk_api.exceptions.VkApiError:
             pass
 
     def _send_attachment(self, id_user, url_text):
@@ -139,7 +139,7 @@ class VKAPIBot:
                 user_id=id_user,
                 random_id=get_random_id(),
                 attachment=url_text)
-        except:
+        except vk_api.exceptions.VkApiError:
             pass
 
     def open_session(self):
