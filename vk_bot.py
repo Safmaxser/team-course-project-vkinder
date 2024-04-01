@@ -9,6 +9,13 @@ from vk_data import OperationsDB
 
 
 class UserData:
+    """
+
+    A class for working with temporary user variables in a session,
+    as well as for controlling the display (of favorites or a
+    black list of persons) associated with these variables
+
+    """
     def __init__(self):
         self.number_position = 0
         self.age_from = None
@@ -22,27 +29,68 @@ class UserData:
         self.current_person = None
 
     def reset(self):
+        """
+
+        Use this method to reset (return to original)
+        temporary variables
+
+        """
         self.__init__()
 
     def begin_viewed(self, viewed_list, viewed_type):
+        """
+
+        Use this method to create a display
+        (favorites or blacklist)
+        using temporary variables
+
+        """
         self.viewed_position = 0
         self.viewed_list = viewed_list
         self.viewed_type = viewed_type
 
     def next_position_viewed(self):
+        """
+
+        Use this method to scroll forward in
+        a list (favorites or blacklist)
+        using temporary variables
+
+        """
         if self.viewed_position < len(self.viewed_list) - 1:
             self.viewed_position += 1
 
     def back_position_viewed(self):
+        """
+
+        Use this method to scroll back through
+        a list (favorites or blacklist)
+        using temporary variables
+
+        """
         if self.viewed_position > 0:
             self.viewed_position -= 1
 
     def del_position_viewed(self):
+        """
+
+        Use this method to remove a person from a
+        specific list (favorites or blacklist)
+        using temporary variables
+
+        """
         self.viewed_list.pop(self.viewed_position)
         if self.viewed_position > len(self.viewed_list) - 1:
             self.viewed_position = len(self.viewed_list) - 1
 
     def viewed_keyboard(self):
+        """
+
+        Use this method to determine the identifier
+        name of keyboard navigation buttons
+        from temporary variables
+
+        """
         if len(self.viewed_list) == 1:
             return ''
         elif self.viewed_position == 0:
@@ -54,6 +102,16 @@ class UserData:
 
 
 def buttons(name_button):
+    """
+
+    Use this method to define the name of the buttons to create and react
+
+    :param name_button: name identifier of the desired button
+    :type name_button: :obj:'str'
+
+    :return: button name to use and define
+
+    """
     if name_button == 'search_my':
         return 'Искать по моим данным'
     elif name_button == 'search_select':
@@ -83,6 +141,19 @@ def buttons(name_button):
 
 
 def keyboard_add(function=None, control=None):
+    """
+
+    Use this method to create a keyboard with the desired set of buttons
+
+    :param function: keyboard function identifier name
+    :type function: :obj:'str'
+
+    :param control: identifier name of keyboard navigation buttons
+    :type control: :obj:'str'
+
+    :return: keyboard string like json.dumps(*args, **kwargs)
+
+    """
     color_main = VkKeyboardColor.PRIMARY
     keyboard = VkKeyboard(one_time=False)
     if control == 'begin':
@@ -130,6 +201,16 @@ def keyboard_add(function=None, control=None):
 
 
 def calculate_age(date_birth):
+    """
+
+    Use this method to calculate age by date of birth
+
+    :param date_birth: birthday date string of the form '%d.%m.%Y'
+    :type date_birth: :obj:'str'
+
+    :return: number of complete years
+
+    """
     today = date.today()
     my_date = datetime.strptime(date_birth, '%d.%m.%Y').date()
     age = today.year - my_date.year - ((today.month, today.day) <
@@ -138,6 +219,13 @@ def calculate_age(date_birth):
 
 
 class VKAPIBot:
+    """
+
+    A class for working with the VK bot using the vk_api module.
+    After class initialization you need to call open_session()
+    method then listen_stream()
+
+    """
     def __init__(self, token_bot, token_user, db_vk: OperationsDB):
         self.token_bot = token_bot
         self.token_user = token_user
@@ -147,18 +235,67 @@ class VKAPIBot:
         self.vk_bot_api = None
         self.users_data = {}
 
-    def _send_message(self, id_user, message_text,
-                      function=None, control=None):
+    def _user_data(self, id_user):
+        """
+
+        This method is designed to handle new
+        users and serves two purposes.
+        First creation for a new user of a class
+        with temporary variables in the session.
+        Second adding a new user to the database
+
+        :param id_user: VK user ID
+        :type id_user: :obj:'int'
+
+        """
+        try:
+            self.users_data[id_user]
+        except KeyError:
+            self.users_data[id_user] = UserData()
+        if not self.db_vk.exists_user(id_user):
+            first_name, last_name = self._get_name_user(id_user)
+            self.db_vk.add_user(
+                id_vk=id_user, first_name=first_name, last_name=last_name)
+
+    def _send_message(self, id_user, message_text, **keyboard_type):
+        """
+
+        This method is intended to send a message
+        to the user via vk_api
+
+        :param id_user: VK user ID
+        :type id_user: :obj:'int'
+
+        :param message_text: string message for the user.
+        :type message_text: :obj:'str'
+
+        :param **keyboard_type: desired keyboard in the message.
+        :type **keyboard_type: :obj:'dict'
+
+        """
         try:
             self.vk_bot_api.messages.send(
                 user_id=id_user,
                 random_id=get_random_id(),
-                keyboard=keyboard_add(function=function, control=control),
+                keyboard=keyboard_add(**keyboard_type),
                 message=message_text)
         except vk_api.exceptions.VkApiError:
             pass
 
     def _send_attachment(self, id_user, url_text):
+        """
+
+        This method is intended for sending a message
+        in attachment format (for sending photos)
+        to the user via vk_api
+
+        :param id_user: VK user ID
+        :type id_user: :obj:'int'
+
+        :param url_text: string in the format of special links to photos
+        :type url_text: :obj:'str'
+
+        """
         try:
             self.vk_bot_api.messages.send(
                 user_id=id_user,
@@ -167,17 +304,32 @@ class VKAPIBot:
         except vk_api.exceptions.VkApiError:
             pass
 
-    def open_session(self):
-        vk_session_bot = vk_api.VkApi(token=self.token_bot)
-        self.vk_bot_api = vk_session_bot.get_api()
-        self.longpoll = VkLongPoll(vk_session_bot)
-        self.vk_user_api = vk_api.VkApi(token=self.token_user).get_api()
-
     def _get_name_user(self, id_user):
+        """
+
+        This method is designed to obtain the
+        full name (first and last name) of a person
+
+        :param id_user: VK user ID
+        :type id_user: :obj:'int'
+
+        :return: first and last name in the list
+
+        """
         user = self.vk_user_api.users.get(user_ids=id_user)[0]
         return [user["first_name"], user["last_name"]]
 
     def _get_photos_user(self, id_user):
+        """
+
+        This method is designed to obtain photographs of a person
+
+        :param id_user: VK user ID
+        :type id_user: :obj:'int'
+
+        :return: list of special links to photos
+
+        """
         selected_photos = []
         photos_user = self.vk_user_api.photos.get(
             owner_id=id_user, album_id='profile', extended=1)['items']
@@ -191,18 +343,28 @@ class VKAPIBot:
                 break
         return attachment_list
 
-    def _user_data(self, id_user):
-        try:
-            self.users_data[id_user]
-        except KeyError:
-            self.users_data[id_user] = UserData()
-        if not self.db_vk.exists_user(id_user):
-            first_name, last_name = self._get_name_user(id_user)
-            self.db_vk.add_user(
-                id_vk=id_user, first_name=first_name, last_name=last_name)
-
     def _send_person(self, id_user, id_person, result_name=None,
                      **keyboard_type):
+        """
+
+        This method is designed to send messages to a user with
+        a name, with a link to the page and photos of the person
+
+        :param id_user: VK user ID
+        :type id_user: :obj:'int'
+
+        :param id_person: VK ID of the person being displayed
+        :type id_person: :obj:'int'
+
+        :param result_name: string representation of
+            the person's name, optional. If not,
+            then it is obtained in this method
+        :type result_name: :obj:'str'
+
+        :param **keyboard_type: The desired keyboard in the message
+        :type **keyboard_type: :obj:'dict'
+
+        """
         if result_name:
             send_name = result_name
         else:
@@ -214,6 +376,17 @@ class VKAPIBot:
             id_user, ','.join(self._get_photos_user(id_person)))
 
     def _show_persons(self, id_user, data: UserData):
+        """
+
+        This method is intended to display (send a message)
+        one item from the Favorites or Blacklist of Persons list.
+
+        :param data: a specific class containing variables
+            and methods for working with display to the user
+        :type data: :obj:'UserData'
+
+
+        """
         if data.viewed_list:
             keyboard_type = {'function': data.viewed_type,
                              'control': data.viewed_keyboard()}
@@ -225,7 +398,19 @@ class VKAPIBot:
                 id_user, f'"{buttons(data.viewed_type)}" пуст!',
                 function='main')
 
-    def processing_message(self, id_user, message_text):
+    def _processing_message(self, id_user, message_text):
+        """
+
+        This method is designed to process messages from the
+        user and respond to the user depending on the scenario
+
+        :param id_user: VK user ID
+        :type id_user: :obj:'int'
+
+        :param message_text: string message from the user
+        :type message_text: :obj:'str'
+
+        """
         self._user_data(id_user)
         data = self.users_data[id_user]
         if message_text == buttons('start_over'):
@@ -400,10 +585,30 @@ class VKAPIBot:
         else:
             self._send_message(id_user, 'Какая-то ошибка! Попробуйте снова!')
 
+    def open_session(self):
+        """
+
+        Use this method to create a vk_api session.
+        Creates one session with a bot token for bot
+        functions, and another with a (user) token with
+        rights to search for people and cities.
+
+        """
+        vk_session_bot = vk_api.VkApi(token=self.token_bot)
+        self.vk_bot_api = vk_session_bot.get_api()
+        self.longpoll = VkLongPoll(vk_session_bot)
+        self.vk_user_api = vk_api.VkApi(token=self.token_user).get_api()
+
     def listen_stream(self):
+        """
+
+        Use this method to listen to events (messages)
+        coming from VK (User Long Poll API)
+
+        """
         for event in self.longpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW:
                 if event.to_me:
                     threading.Thread(
-                        target=self.processing_message,
+                        target=self._processing_message,
                         args=(event.user_id, event.text)).start()

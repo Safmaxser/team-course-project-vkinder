@@ -48,6 +48,17 @@ def create_tables_models(engine):
 
 
 class OperationsDB:
+    """
+
+    A class for working with a database that is designed to store
+    data about VK users and their tables with favorites and a black
+    list of selected persons. You can work with this class through
+    the context manager. Or after initializing the class you need
+    to call the connect() method, then create_tables(),
+    then open_session() and after finishing working with
+    the class call the close_session() method
+
+    """
     def __init__(self, drive, database, connect_name, port, user, password):
         self.drive = drive
         self.database = database
@@ -82,14 +93,31 @@ class OperationsDB:
     def close_session(self):
         self.session.close()
 
-    def exists_user(self, key_id):
-        user = self.session.query(Users).get(key_id)
+    def exists_user(self, id_user):
+        """
+
+        Use this method to check if a user exists in the DB
+
+        :param id_user: User ID (aka VK user ID)
+        :type id_user: :obj:'int'
+
+        """
+        user = self.session.query(Users).get(id_user)
         if user:
             return True
         else:
             return False
 
     def add_user(self, **user_data):
+        """
+
+        Use this method to add user to DB
+
+        :param user_data: Dictionary containing user
+            data (id_vk, first_name, last_name)
+        :type user_data: :obj:'dict'
+
+        """
         with self.session as sn:
             try:
                 user = Users(**user_data)
@@ -99,6 +127,19 @@ class OperationsDB:
                 pass
 
     def exists_blacklist(self, id_vk_user, id_vk_person):
+        """
+
+        Use this method to check the presence of
+        a person in the Blacklist
+
+        :param id_vk_user: User ID (aka VK user ID)
+        :type id_vk_user: :obj:'int'
+
+        :param id_vk_person: Identifier of
+            the VK user person to be added
+        :type id_vk_user: :obj:'int'
+
+        """
         with self.session as sn:
             blacklist = sn.query(Blacklist)
             blacklist = blacklist.filter(
@@ -110,6 +151,18 @@ class OperationsDB:
             return False
 
     def del_favorites(self, id_vk_user, id_vk_person):
+        """
+
+        Use this method to remove a person from "Favorites"
+
+        :param id_vk_user: User ID (aka VK user ID)
+        :type id_vk_user: :obj:'int'
+
+        :param id_vk_person: Identifier of
+            the VK user person to be added
+        :type id_vk_user: :obj:'int'
+
+        """
         with self.session as sn:
             favorites = sn.query(Favorites)
             favorites = favorites.filter(
@@ -122,6 +175,18 @@ class OperationsDB:
                 pass
 
     def del_blacklist(self, id_vk_user, id_vk_person):
+        """
+
+        Use this method to remove a person from the "Blacklist"
+
+        :param id_vk_user: User ID (aka VK user ID)
+        :type id_vk_user: :obj:'int'
+
+        :param id_vk_person: Identifier of
+            the VK user person to be added
+        :type id_vk_user: :obj:'int'
+
+        """
         with self.session as sn:
             blacklist = sn.query(Blacklist)
             blacklist = blacklist.filter(
@@ -134,6 +199,18 @@ class OperationsDB:
                 pass
 
     def add_favorites(self, id_vk_user, id_vk_person):
+        """
+
+        Use this method to add a person to your "Favorites"
+
+        :param id_vk_user: User ID (aka VK user ID)
+        :type id_vk_user: :obj:'int'
+
+        :param id_vk_person: Identifier of
+            the VK user person to be added
+        :type id_vk_user: :obj:'int'
+
+        """
         self.del_blacklist(id_vk_user, id_vk_person)
         if id_vk_user and id_vk_person:
             with self.session as sn:
@@ -146,6 +223,18 @@ class OperationsDB:
                     pass
 
     def add_blacklist(self, id_vk_user, id_vk_person):
+        """
+
+        Use this method to add a person to the "Blacklist"
+
+        :param id_vk_user: User ID (aka VK user ID)
+        :type id_vk_user: :obj:'int'
+
+        :param id_vk_person: Identifier of
+            the VK user person to be added
+        :type id_vk_user: :obj:'int'
+
+        """
         self.del_favorites(id_vk_user, id_vk_person)
         if id_vk_user and id_vk_person:
             with self.session as sn:
@@ -158,9 +247,25 @@ class OperationsDB:
                     pass
 
     def get_favorites(self, id_user):
+        """
+
+        Use this method to get a list of "Favorite" of persons
+
+        :param id_user: User ID (aka VK user ID)
+        :type id_user: :obj:'int'
+
+        """
         sql_query = self.session.query(Favorites.id_vk_person)
         return sql_query.filter(Favorites.id_vk_user == id_user).all()
 
     def get_blacklist(self, id_user):
+        """
+
+        Use this method to get the list "Blacklist" of persons
+
+        :param id_user: User ID (aka VK user ID)
+        :type id_user: :obj:'int'
+
+        """
         sql_query = self.session.query(Blacklist.id_vk_person)
         return sql_query.filter(Blacklist.id_vk_user == id_user).all()
